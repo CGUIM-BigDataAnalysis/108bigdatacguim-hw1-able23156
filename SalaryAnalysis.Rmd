@@ -1,7 +1,7 @@
 ---
 title: "108-2 大數據分析方法 作業一"
 output: github_document
-author: put your name here
+author: 王子諒
 ---
 
 搞不清楚各行各業的薪資差異嗎? 念研究所到底對第一份工作的薪資影響有多大? CP值高嗎? 透過分析**初任人員平均經常性薪資**- （107年）https://data.gov.tw/dataset/6647 （104-105年）http://ipgod.nchc.org.tw/dataset/a17000000j-020066 ，可初步了解台灣近幾年各行各業、各學歷的起薪。
@@ -13,42 +13,106 @@ author: put your name here
 library(readr)
 library(dplyr)
 
+a104 <- read_csv("C:/Users/ab/Desktop/104a.csv")
+a107 <- read_csv("C:/Users/ab/Desktop/107a.csv")
+
+a104$`大職業別`<-gsub("部門|、","",a104$`大職業別`)
+a107$`大職業別`<-gsub("_","",a107$`大職業別`)
+a107$`大職業別`<-gsub("建工程","造業",a107$`大職業別`)
+a107$`大職業別`<-gsub("出版、影音製作、傳播及資通訊服務業","資訊及通訊傳播業",a107$`大職業別`)
+a107$`大職業別`<-gsub("教育業","教育服務業",a107$`大職業別`)
+a107$`大職業別`<-gsub("醫療保健業","醫療保健服務業",a107$`大職業別`)
+
+a104$`大學-薪資`<-as.numeric(gsub("—|…",NA,a104$`大學-薪資`))
+a107$`大學-薪資`<-as.numeric(gsub("—|…",NA,a107$`大學-薪資`))
+
+Compare<-(inner_join(a104,a107,by="大職業別"))
 ```
 
 ### 107年度薪資較104年度薪資高的職業有哪些? 
 ```{r compare103106}
-#這是R Code Chunk
+salary<-select(a107,`大職業別`)
+salary$salaryrate<-((a107$`大學-薪資`)/(a104$`大學-薪資`))
+
+salary<-salary[complete.cases(salary$salaryrate),]
+highsalaryrate<-arrange(salary,desc(salaryrate))
+
+head(highsalaryrate,10)
 ```
+以上十筆資料是107年度薪資比104年度薪資較高的大職業別，我們使用的salaryrate分子是107年的資料，分母是104的資料,數值皆大於1,也可確認都是107年薪資大於104年。
+
+
 
 ### 提高超過5%的的職業有哪些? 
 ```{r over5}
-#這是R Code Chunk
+salary<-select(a107,`大職業別`)
+salary$salaryrate<-((a107$`大學-薪資`)/(a104$`大學-薪資`))
+
+salary<-salary[complete.cases(salary$salaryrate),]
+rate<-filter( salary , salaryrate > 1.05 )
+
+highsalaryrate<-arrange(rate,desc(salaryrate))
+
+highsalaryrate
 ```
 
 ### 主要的職業種別是哪些種類呢?
 ```{r mainType}
-#這是R Code Chunk
+table(sapply( (strsplit (rate$`大職業別`,"-") ), "[" ,  1))%>%
+  View()
 ```
 
 ## 男女同工不同酬現況分析
 
-男女同工不同酬一直是性別平等中很重要的問題，分析資料來源為103到106年度的大學畢業薪資。
+男女同工不同酬一直是性別平等中很重要的問題，分析資料來源為104到107年度的大學畢業薪資。
 
 ### 104和107年度的大學畢業薪資資料，哪些行業男生薪資比女生薪資多?
 ```{r male}
-#這是R Code Chunk
+a104$`大學-女/男`<-as.numeric(gsub("—|…",NA,a104$`大學-女/男`))
+b104<-a104[complete.cases(a104$`大學-女/男`),]
+b104<-select(b104,`大職業別`,`大學-女/男`)
+b104<-b104[order(b104$`大學-女/男`,decreasing = T),]
+
+
+a107$`大學-女/男`<-as.numeric(gsub("—|…",NA,a107$`大學-女/男`))
+c107<-a107[complete.cases(a107$`大學-女/男`),]
+c107<-select(c107,`大職業別`,`大學-女/男`)
+c107<-c107[order(c107$`大學-女/男`,decreasing = T),]
+
+
+b104$`大學-女/男`<-as.character(b104$`大學-女/男`)
+c107$`大學-女/男`<-as.character(c107$`大學-女/男`)
+
+tail(b104,10)
+tail(c107,10)
 ```
+上面的資料為男女薪資比例大小由大到小排序的前十名職業，第一張圖是104年薪資比例的前十名，第二張圖是107年薪資比例的前十名，由上可知，這分別的十種職業女生薪資都低於男生，但有越來越接近的趨勢，如營造業由96.35上升至97.52可看出。
+
 ### 哪些行業女生薪資比男生薪資多? 
 ```{r female}
-#這是R Code Chunk
+head(b104,10)
+head(c107,10)
 ```
+第一張圖是104年薪資比例的前十名，女生在分子，從比例可以知道專業科學及技術服務業-技藝機械設備操作及組裝人員的比例為100.26可以知道女生的薪資比男生高。
+第二張圖是107年薪資比例的前十名，前八個職業的比例都為100，可以知道這八個職業男女薪資相同且沒有女生薪資高於男生的職業。
+
 
 ## 研究所薪資差異
 
 以107年度的資料來看，哪個職業別念研究所最划算呢 (研究所學歷薪資與大學學歷薪資增加比例最多)?
  
 ```{r grad}
-#這是R Code Chunk
+a107$`研究所-薪資`<-as.numeric(gsub("—|…",NA,a107$`研究所-薪資`))
+a107$`大學-薪資`<-as.numeric(gsub("—|…",NA,a107$`大學-薪資`))
+
+dataset <- data.frame(name = a107$`大職業別`)
+dataset$salaryrate<-a107$`研究所-薪資`/a107$`大學-薪資`
+
+dataset<-dataset[complete.cases(dataset$salaryrate),]
+dataseta<-dataset[order(dataset$salaryrate,decreasing = T),]
+
+head(dataseta,10)
+
 ```
 
 ## 我有興趣的職業別薪資狀況分析
